@@ -1,0 +1,29 @@
+appId: ai.arena.mct-diff-studio
+productName: MCT Diff Studio
+copyright: Copyright © 2026
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - web-dist/**/*
+  - "!**/*.map"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - portable
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: MCT Diff Studio
+
+portable:
+  artifactName: ${productName}-${version}-win-portable.${ext}

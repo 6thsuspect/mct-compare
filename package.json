@@ -1,0 +1,32 @@
+{
+  "name": "mct-version-tool",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MIDAS CIVIL MCT Comparator & Bidirectional Converter (2022 <-> 2025)",
+  "type": "commonjs",
+  "workspaces": [
+    "packages/*",
+    "apps/cli",
+    "apps/web",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "build:web": "npm --workspace @mct/web run build",
+    "clean": "rm -rf packages/*/dist apps/cli/dist apps/web/dist apps/desktop/dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b tsconfig.json --force && npm --workspace @mct/web run typecheck && npm --workspace @mct/desktop run typecheck",
+    "verify:fixtures": "node scripts/verify-fixtures.mjs",
+    "mct": "node apps/cli/dist/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

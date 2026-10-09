@@ -1,0 +1,14 @@
+{
+  "name": "@mct/diff",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Text and semantic (engineering-aware) MCT comparison",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "dependencies": {
+    "@mct/shared-types": "0.1.0",
+    "@mct/parser": "0.1.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@mct/shared-types",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shared kernel types for the MCT version tool",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"]
+}

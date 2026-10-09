@@ -1,0 +1,13 @@
+{
+  "name": "@mct/parser",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lossless, line-preserving MCT parser and serializer",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "dependencies": {
+    "@mct/shared-types": "0.1.0"
+  }
+}

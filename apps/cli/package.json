@@ -1,0 +1,17 @@
+{
+  "name": "@mct/cli",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Command-line interface for the MCT version tool",
+  "type": "commonjs",
+  "bin": {
+    "mct": "./dist/cli.js"
+  },
+  "dependencies": {
+    "@mct/shared-types": "0.1.0",
+    "@mct/parser": "0.1.0",
+    "@mct/diff": "0.1.0",
+    "@mct/converter": "0.1.0",
+    "@mct/validation": "0.1.0"
+  }
+}

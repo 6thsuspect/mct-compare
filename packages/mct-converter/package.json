@@ -1,0 +1,14 @@
+{
+  "name": "@mct/converter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bidirectional, rule-based MCT version converter (CIVIL 2022 <-> 2025)",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "dependencies": {
+    "@mct/shared-types": "0.1.0",
+    "@mct/parser": "0.1.0"
+  }
+}

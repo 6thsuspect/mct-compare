@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+.diff-scroll {
+  scrollbar-width: thin;
+}
+
+.code-row {
+  line-height: 1.25rem;
+  min-height: 1.25rem;
+}
+
+.code-font {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  white-space: pre;
+}
