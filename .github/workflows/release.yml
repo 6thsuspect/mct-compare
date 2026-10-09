@@ -1,0 +1,44 @@
+name: Release (Windows desktop)
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Full install WITHOUT the electron binary skip: packaging needs it,
+      # and the GitHub runner has CDN access.
+      - run: npm ci
+      - run: npm run verify:fixtures
+      - run: npm run build
+      - run: npm test
+
+      - name: Build web app
+        run: npm --workspace @mct/web run build
+
+      - name: Stage renderer for Electron
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force apps/desktop/web-dist -ErrorAction SilentlyContinue
+          Copy-Item -Recurse apps/web/dist apps/desktop/web-dist
+
+      - name: Package installer + portable
+        run: npm --workspace @mct/desktop run dist
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mct-diff-studio-windows
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.yml
+            !apps/desktop/release/win-unpacked

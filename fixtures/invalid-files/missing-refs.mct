@@ -1,0 +1,11 @@
+; Invalid fixture: dangling element/material/section/node references.
+*VERSION
+   9.1.0
+
+*NODE
+  1, 0, 0, 0
+
+*ELEMENT
+  10, BEAM, 99, 99, 1, 77, 0, 0
+
+*ENDDATA

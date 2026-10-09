@@ -1,0 +1,36 @@
+; Mini 2022-shaped fixture: one instance of every version change.
+*VERSION
+   9.1.0
+
+*NODE
+; iNO, X, Y, Z
+  1, 0, 0, 0
+  2, 1, 0, 0
+
+*MATERIAL
+    1, STEEL, E350, 0, 0, , C, NO, 0.02, 1, IS(S), , E350, NO, 2e+08
+
+*SECTION
+    2, TAPERED   , Nose              , CT, 0, 0, 0, 0, 0, 0, 0, 0, YES, NO, H  , 1, 1, USER
+       3.3, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0,  1.5, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0
+
+*DGN-SECT
+    2, TAPERED   , Nose              , CT, 0, 0, 0, 0, 0, 0, 0, 0, YES, NO, H  , 1, 1, USER
+       3.3, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0,  1.5, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0
+
+*ELEMENT
+  10, BEAM, 1, 2, 1, 2, 0, 0
+
+*STLDCASE
+   G1, D,
+
+*USE-STLD, G1
+
+*BEAMLOAD
+  10, BEAM, UNILOAD, GZ, NO, NO, aDir[1], , , , 0, -1, 1, -1, 0, 0, 0, 0, LG, NO, 0, 0, NO,
+
+*LOADCOMB
+   NAME=C1, STEEL, STRENGTH, 0, 0, , 0, 0, 0
+        ST, G1, 1.35
+
+*ENDDATA

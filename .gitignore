@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+apps/web/dist/
+apps/desktop/dist/
+apps/desktop/release/
+apps/desktop/web-dist/
+.DS_Store
+*.local
+coverage/

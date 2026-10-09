@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/shared-types" },
+    { "path": "packages/mct-parser" },
+    { "path": "packages/mct-diff" },
+    { "path": "packages/mct-converter" },
+    { "path": "packages/mct-validation" },
+    { "path": "apps/cli" }
+  ]
+}

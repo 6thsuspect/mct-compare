@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify:fixtures
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm --workspace @mct/web run build
+
+      - name: CLI smoke test
+        run: |
+          node apps/cli/dist/cli.js diff fixtures/reference-2022.mct fixtures/reference-2025.mct | head -5
+          node apps/cli/dist/cli.js convert --from 2022 --to 2025 --dry-run fixtures/reference-2022.mct
+          node apps/cli/dist/cli.js validate fixtures/reference-2025.mct
