@@ -1,0 +1,57 @@
+;---------------------------------------------------------------------------
+;  MIDAS/Civil Text(MCT) File.
+;---------------------------------------------------------------------------
+
+*VERSION
+   9.6.0
+
+*UNIT    ; Unit System
+; FORCE, LENGTH, HEAT, TEMPER
+   KN   , M, BTU, C
+
+*NODE    ; Nodes
+; iNO, X, Y, Z
+     1, 0, 0, 0
+     2, 3, 0, 0
+
+*ELEMENT    ; Elements
+; TYPE, iEL, MAT, SECT, ANGLE, iN1, iN2, GROUP
+; BEAM,    1, 1, 1, 0,     1,     2, ALL
+
+*SECTION    ; Section
+; iSEC, TYPE, SNAME, [OFFSET2], bSD, bWE, bHUMBLY. SHAPE, iyVAR, izVAR, STYPE
+; iSEC, TYPE, SNAME, [OFFSET], bSD, bWE, bHUMBLY, SHAPE
+; [SRC]  : 1, DB, NAME1, NAME2 or 2, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, iN1, iN2, [Dumbbell]
+; [Dumbbell] : bInfusion
+   10, TAPERED   , Tap1            , CT, 0, 0, 0, 0, 0, 0, 0, 0, YES, NO, YES, H  , 1, 1, USER
+       3.3, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0,  1.5, 0.5, 0.012, 0.02, 0.58, 0.02, 0, 0
+   11, COMPOSITE-B, CompB          , CT, 0, 0, 0, 0, 0, 0, YES, NO, NO, H  
+   12, COMPOSITE-I, CompI          , CT, 0, 0, 0, 0, 0, 0, YES, NO, YES, I  
+   13, DBUSER    , PlainBox        , CT, 0, 0, 0, 0, 0, 0, YES, NO, SB , 2, 0.2025, 1, 0, 0, 0, 0, 0, 0, 0, 0
+   14, SRC       , SrcSect         , CT, 0, 0, 0, 0, 0, 0, YES, NO, SRC, 205500, 7.85, 0.3, 0.2, 0.25, 7.9e-06
+       0.5, 0.8, 2, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 29, 30, YES
+
+*DGN-SECT
+; same layout as SECTION
+   10, TAPERED   , Tap1            , CT, 0, 0, 0, 0, 0, 0, 0, 0, YES, NO, YES, H  , 1, 1, USER
+
+*DGN-STEEL    ; Steel Design Code
+   CODE=AISC(15th)-LRFD16, NO, YES, 0
+   0, 0
+
+*BEAMLOAD    ; Element Beam Loads
+; ELEM_LIST, CMD, TYPE, DIR, bPROJ, [ECCEN], [VALUE], GROUP
+     1, BEAM   , UNILOAD, GZ, NO , NO, LY, , , , 0, -9.51, 1, -9.51, 0, 0, 0, 0, Girder Weight, NO, 0, 0, NO, 
+     2, BEAM   , UNILOAD, GZ, NO , YES, LY, 0.1, 0.2, YES, 0, -5.0, 1, -5.0, 0, 0, 0, 0, Deck, NO, 0, 0, NO, 
+     3, BEAM   , UNILOAD, GZ, NO , NO, LY, , , , 0, -2.0, 1, -2.0, 0, 0, 0, 0, SW, NO, 0, 0, NO, 
+
+*LOADCOMB    ; Combinations
+; NAME=NAME, KIND, ACTIVE, bES, iTYPE, DESC, iSERV-TYPE, nLCOMTYPE, nSEISTYPE, LcomFactor ; line 1
+   NAME=SWT, STEEL, STRENGTH, 0, 0, , 0, 0, 0, 1
+        ST, SW, 1.35
+
+*DGN-MATL    ; Modify Steel(Concrete) Material
+    1, STEEL, E350              , 1, IS(S)      ,            ,E350          , 1, EN04(RC)   ,            ,               , , , , 0, 0,NO, 0.0000e+00,     0,, 0, 0,0, 0, 0,0, 0, 0,NO,
+    2, CONC , M45               , 1, IS(RC)     ,            ,M45           , NO, 1, NO, 0, , , , 0, 0, 31500, NO, 0, 0,            ,            ,              , 0, NO, 1, , , , 0, 0, 0
+
+*ENDDATA

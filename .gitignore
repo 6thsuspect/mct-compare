@@ -1,0 +1,9 @@
+# generated conversion output and logs
+out/
+tests/synthetic_out.mct
+tests/synthetic_report.txt
+*_2022.mct
+
+# python
+__pycache__/
+*.pyc
