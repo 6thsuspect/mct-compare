@@ -65,7 +65,13 @@ export default function App() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                disabled={t.id !== "workspace" && (!fileA || !fileB)}
+                disabled={
+                  t.id === "compare"
+                    ? !fileA || !fileB
+                    : t.id === "reports"
+                      ? !fileA && !fileB
+                      : false
+                }
                 className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-40 ${
                   tab === t.id
                     ? "bg-blue-600 text-white"
@@ -111,6 +117,10 @@ export default function App() {
             fileB={fileB}
             detectedA={detectedA}
             detectedB={detectedB}
+            evidenceA={invA.data?.evidence ?? []}
+            evidenceB={invB.data?.evidence ?? []}
+            stampA={invA.data?.versionString ?? null}
+            stampB={invB.data?.versionString ?? null}
             rules={rules}
             onAdoptOutput={(name, text) => {
               setFileB({ name, text });
@@ -268,6 +278,7 @@ function CompareTab(props: {
           selectedKey={selectedKey}
           onSelect={setSelectedKey}
           onJumpToLine={jumpToLine}
+          exportBase={`${props.fileA.name}__vs__${props.fileB.name}`}
         />
       )}
     </div>

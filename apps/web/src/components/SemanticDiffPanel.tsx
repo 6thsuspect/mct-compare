@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { semanticCsv, semanticJson } from "@mct/diff";
 import type { SemanticChange, SemanticStatus } from "@mct/shared-types";
+import { download } from "../engine";
 
 const STATUS_STYLE: Record<SemanticStatus, string> = {
   equivalent: "bg-green-100 text-green-800",
@@ -14,6 +16,7 @@ export default function SemanticDiffPanel(props: {
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
   onJumpToLine: (side: "a" | "b", line1: number) => void;
+  exportBase: string;
 }) {
   const [statuses, setStatuses] = useState<Set<SemanticStatus>>(
     new Set(["modified", "added", "removed", "unclassified"]),
@@ -91,6 +94,33 @@ export default function SemanticDiffPanel(props: {
           <span className="text-slate-400">
             {filtered.length.toLocaleString()} / {props.changes.length.toLocaleString()}
           </span>
+          <span className="text-slate-300">|</span>
+          <button
+            className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+            title="Download the currently filtered changes as CSV (one row per field)"
+            onClick={() =>
+              download(
+                `${props.exportBase}.semantic.csv`,
+                semanticCsv(filtered),
+                "text/csv",
+              )
+            }
+          >
+            Export CSV ({filtered.length.toLocaleString()})
+          </button>
+          <button
+            className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+            title="Download the currently filtered changes as JSON"
+            onClick={() =>
+              download(
+                `${props.exportBase}.semantic.json`,
+                semanticJson(filtered),
+                "application/json",
+              )
+            }
+          >
+            Export JSON
+          </button>
         </div>
         <div className="diff-scroll max-h-[62vh] overflow-auto rounded-lg border border-slate-300 bg-white">
           {filtered.slice(0, 2000).map((c) => {
@@ -213,3 +243,4 @@ export default function SemanticDiffPanel(props: {
     </div>
   );
 }
+

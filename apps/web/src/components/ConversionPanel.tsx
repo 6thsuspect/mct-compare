@@ -1,7 +1,18 @@
 import { useMemo, useState } from "react";
-import type { CivilVersion, ConversionReport, Severity } from "@mct/shared-types";
-import { download, engineApi, type RuleInfo } from "../engine";
-import type { PickedFile } from "./FileDropZone";
+import type {
+  CivilVersion,
+  ConversionReport,
+  Severity,
+  ValidationReport,
+} from "@mct/shared-types";
+import {
+  download,
+  engineApi,
+  useEngine,
+  type Inventory,
+  type RuleInfo,
+} from "../engine";
+import FileDropZone, { type PickedFile } from "./FileDropZone";
 
 const SEVERITY_STYLE: Record<Severity, string> = {
   info: "bg-slate-100 text-slate-700",
@@ -10,16 +21,27 @@ const SEVERITY_STYLE: Record<Severity, string> = {
   loss: "bg-rose-200 text-rose-900",
 };
 
+type Source = "a" | "b" | "new";
+type FromChoice = CivilVersion | "auto";
+
+const opposite = (v: CivilVersion): CivilVersion =>
+  v === "2022" ? "2025" : "2022";
+
 export default function ConversionPanel(props: {
   fileA: PickedFile | null;
   fileB: PickedFile | null;
   detectedA: string;
   detectedB: string;
+  evidenceA: string[];
+  evidenceB: string[];
+  stampA: string | null;
+  stampB: string | null;
   rules: RuleInfo[];
   onAdoptOutput: (name: string, text: string) => void;
 }) {
-  const [source, setSource] = useState<"a" | "b">("a");
-  const [from, setFrom] = useState<CivilVersion>("2022");
+  const [source, setSource] = useState<Source>(props.fileA ? "a" : "new");
+  const [extraFile, setExtraFile] = useState<PickedFile | null>(null);
+  const [from, setFrom] = useState<FromChoice>("auto");
   const [to, setTo] = useState<CivilVersion>("2025");
   const [includeProvisional, setIncludeProvisional] = useState(false);
   const [refreshComments, setRefreshComments] = useState(false);
@@ -30,18 +52,61 @@ export default function ConversionPanel(props: {
     new Set(["info", "warning", "error", "loss"]),
   );
 
-  const sourceFile = source === "a" ? props.fileA : props.fileB;
-  const detected = source === "a" ? props.detectedA : props.detectedB;
+  const invExtra = useEngine<Inventory>(
+    extraFile ? `X:${extraFile.name}:${extraFile.text.length}` : null,
+    () => engineApi.inventory(extraFile!.name, extraFile!.text),
+  );
+
+  const sourceFile = source === "a" ? props.fileA : source === "b" ? props.fileB : extraFile;
+  const detected =
+    source === "a"
+      ? props.detectedA
+      : source === "b"
+        ? props.detectedB
+        : (invExtra.data?.detected ?? "…");
+  const evidence =
+    source === "a"
+      ? props.evidenceA
+      : source === "b"
+        ? props.evidenceB
+        : (invExtra.data?.evidence ?? []);
+  const stamp =
+    source === "a"
+      ? props.stampA
+      : source === "b"
+        ? props.stampB
+        : (invExtra.data?.versionString ?? null);
+
+  const effectiveFrom: CivilVersion | null =
+    from === "auto"
+      ? detected === "2022" || detected === "2025"
+        ? detected
+        : null
+      : from;
+
+  // Pre-flight: validate the source (with compat probes for the target)
+  // automatically so problems surface before converting.
+  const preflight = useEngine<ValidationReport>(
+    sourceFile ? `pre:${sourceFile.name}:${sourceFile.text.length}:${to}` : null,
+    () => engineApi.validate(sourceFile!.name, sourceFile!.text, to),
+  );
+
+  const pickSource = (s: Source): void => {
+    setSource(s);
+    setReport(null);
+    const d = s === "a" ? props.detectedA : s === "b" ? props.detectedB : invExtra.data?.detected;
+    if (d === "2022" || d === "2025") setTo(opposite(d));
+  };
 
   const run = async (dryRun: boolean): Promise<void> => {
-    if (!sourceFile) return;
+    if (!sourceFile || !effectiveFrom) return;
     setRunning(true);
     setError(null);
     try {
       const r = await engineApi.convert({
         name: sourceFile.name,
         text: sourceFile.text,
-        from,
+        from: effectiveFrom,
         to,
         includeProvisional,
         refreshComments,
@@ -84,7 +149,13 @@ export default function ConversionPanel(props: {
   };
 
   const ruleInfo = (id: string): RuleInfo | undefined =>
-    props.rules.find((r) => r.id === id && r.from === from && r.to === to);
+    props.rules.find(
+      (r) => r.id === id && r.from === effectiveFrom && r.to === to,
+    );
+
+  const preflightCounts = preflight.data?.counts;
+  const preflightBad =
+    (preflightCounts?.error ?? 0) + (preflightCounts?.loss ?? 0) > 0;
 
   return (
     <div className="space-y-4">
@@ -96,34 +167,70 @@ export default function ConversionPanel(props: {
               <input
                 type="radio"
                 checked={source === "a"}
-                onChange={() => setSource("a")}
+                onChange={() => pickSource("a")}
                 disabled={!props.fileA}
                 className="mr-1"
               />
               A{props.fileA ? ` (${props.fileA.name})` : " (empty)"}
             </label>
-            <label className="text-xs">
+            <label className="mr-3 text-xs">
               <input
                 type="radio"
                 checked={source === "b"}
-                onChange={() => setSource("b")}
+                onChange={() => pickSource("b")}
                 disabled={!props.fileB}
                 className="mr-1"
               />
               B{props.fileB ? ` (${props.fileB.name})` : " (empty)"}
             </label>
-            <span className="ml-2 text-xs text-slate-500">
-              detected: <span className="font-semibold">{detected}</span>
-            </span>
+            <label className="text-xs">
+              <input
+                type="radio"
+                checked={source === "new"}
+                onChange={() => pickSource("new")}
+                className="mr-1"
+              />
+              Another file…
+            </label>
           </div>
+
+          {source === "new" && (
+            <div className="rounded-md border border-blue-200 bg-white p-3">
+              <FileDropZone
+                label="Upload any .mct file to convert (need not match A/B)"
+                accent="blue"
+                file={extraFile}
+                onPick={(f) => {
+                  setExtraFile(f);
+                  setReport(null);
+                }}
+                onClear={() => {
+                  setExtraFile(null);
+                  setReport(null);
+                }}
+              />
+              {invExtra.loading && (
+                <div className="mt-1 text-xs text-slate-500">Analysing…</div>
+              )}
+              {invExtra.data && (
+                <div className="mt-1 text-xs text-slate-500">
+                  {invExtra.data.lines.toLocaleString()} lines ·{" "}
+                  {invExtra.data.records.toLocaleString()} records ·{" "}
+                  {invExtra.data.sections.length} sections
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-xs">
             <label>
               From{" "}
               <select
                 value={from}
-                onChange={(e) => setFrom(e.target.value as CivilVersion)}
+                onChange={(e) => setFrom(e.target.value as FromChoice)}
                 className="rounded border border-slate-300 bg-white px-2 py-1"
               >
+                <option value="auto">Auto-detect</option>
                 <option value="2022">CIVIL 2022</option>
                 <option value="2025">CIVIL 2025</option>
               </select>
@@ -140,7 +247,50 @@ export default function ConversionPanel(props: {
                 <option value="2022">CIVIL 2022</option>
               </select>
             </label>
+            <span className="text-slate-500">
+              detected:{" "}
+              <span className="font-semibold">
+                {detected}
+                {stamp ? ` (${stamp})` : ""}
+              </span>
+              {from === "auto" && effectiveFrom && ` · converting from ${effectiveFrom}`}
+            </span>
           </div>
+
+          {evidence.length > 0 && (
+            <details className="text-xs text-slate-500">
+              <summary className="cursor-pointer">
+                Why {detected === "unknown" ? "detection failed" : `detected as ${detected}`}
+              </summary>
+              <ul className="ml-4 list-disc">
+                {evidence.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {sourceFile && !effectiveFrom && (
+            <div className="rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-900 ring-1 ring-amber-200">
+              Version could not be detected automatically — pick “From” manually
+              to convert.
+            </div>
+          )}
+
+          {preflight.data && preflightCounts && (
+            <div
+              className={`rounded px-2 py-1.5 text-xs ring-1 ${
+                preflightBad
+                  ? "bg-red-50 text-red-900 ring-red-200"
+                  : "bg-green-50 text-green-900 ring-green-200"
+              }`}
+            >
+              Pre-flight vs CIVIL {to}: {preflightCounts.error} error(s),{" "}
+              {preflightCounts.loss} blocking, {preflightCounts.warning} warning(s)
+              {preflightBad
+                ? " — resolve these before converting (see the Validate tab)."
+                : " — clean."}
+            </div>
+          )}
         </div>
         <div className="space-y-2 text-xs">
           <label className="flex items-start gap-2">
@@ -173,14 +323,14 @@ export default function ConversionPanel(props: {
 
       <div className="flex flex-wrap items-center gap-2">
         <button
-          disabled={!sourceFile || running}
+          disabled={!sourceFile || !effectiveFrom || running}
           onClick={() => run(true)}
           className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-40"
         >
           {running ? "Working…" : "Dry-run preview"}
         </button>
         <button
-          disabled={!sourceFile || running}
+          disabled={!sourceFile || !effectiveFrom || running}
           onClick={() => run(false)}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
         >

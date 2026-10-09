@@ -2,3 +2,4 @@ export * from "./text-diff";
 export * from "./model";
 export * from "./matchers";
 export * from "./semantic-diff";
+export * from "./export";

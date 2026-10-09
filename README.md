@@ -11,10 +11,13 @@ web, Windows desktop, and CLI.
   filter, search, whitespace-insensitive mode, and unified-diff export.
 - **Semantic diff** — section-aware record comparison (1,611 evidenced changes
   on the reference pair: TAPERED `bHUMBLY`, BEAMLOAD, LOADCOMB, DGN-MATL…)
-  with field-level before/after inspection and two-way links into the text diff.
+  with field-level before/after inspection, two-way links into the text diff,
+  and CSV/JSON export of the filtered change data.
 - **Bidirectional converter** — explicit, versioned rules (`MCT-CVT-001…005`,
   cosmetic `100`) convert 2022 ↔ 2025. Forward conversion reproduces the 2025
-  reference **byte-identically**, and vice versa. Provisional rules need
+  reference **byte-identically**, and vice versa. Any unrelated `.mct` file can
+  be uploaded and auto-detected (`*VERSION` stamp, else schema heuristics) with
+  a pre-flight validation check. Provisional rules need
   opt-in; unconvertible records block instead of guessing; every change lands
   in a per-record audit trail.
 - **Validation** — file + model integrity checks (references, duplicates,
