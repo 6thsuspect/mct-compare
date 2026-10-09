@@ -530,14 +530,62 @@ KNOWN_BLOCKS = {
 }
 
 
+def default_output_name(in_path: str, outdir: str | None = None) -> str:
+    base, ext = os.path.splitext(os.path.basename(in_path))
+    name = f"{base}_2022{ext or '.mct'}"
+    return os.path.join(outdir, name) if outdir else os.path.join(
+        os.path.dirname(os.path.abspath(in_path)), name)
+
+
+def convert_one(in_path: str, out_path: str | None, profile: dict | None,
+                args, rep: Report) -> str | None:
+    """Convert a single file.  Returns the converted text, or None on read error."""
+    try:
+        with open(in_path, "r", encoding="utf-8", errors="replace", newline="") as fh:
+            text = fh.read()
+    except OSError as e:
+        rep.warn(f"could not read {in_path}: {e}")
+        return None
+
+    mv = re.search(r"^\*VERSION\s*\n\s*([0-9.]+)", text, re.M)
+    src_ver = mv.group(1) if mv else "?"
+    rep.note(f"{os.path.basename(in_path)}: source *VERSION = {src_ver}")
+
+    if src_ver == VERSION_2022:
+        rep.note(f"{os.path.basename(in_path)}: already reports Civil 2022 ({VERSION_2022}); "
+                 "all rules should be no-ops.")
+    elif src_ver not in ("?", VERSION_2025):
+        rep.warn(f"{os.path.basename(in_path)}: *VERSION {src_ver} is neither {VERSION_2025} "
+                 f"nor {VERSION_2022}. The rules are written for 9.6.0 -> 9.1.0; review "
+                 "this file's report carefully.")
+
+    result = convert(text, rep, profile, sync_hdr=not args.no_sync_comments)
+
+    if args.check:
+        return result
+    try:
+        with open(out_path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(result)
+    except OSError as e:
+        rep.warn(f"could not write {out_path}: {e}")
+        return None
+    return result
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
-        description="Convert a MIDAS Civil 2025 MCT file to MIDAS Civil 2022 format.")
-    ap.add_argument("input", help="input .mct file (Civil 2025)")
-    ap.add_argument("-o", "--output", help="output .mct file (Civil 2022)")
-    ap.add_argument("--report", help="write the conversion report to this file")
+        description="Convert MIDAS Civil 2025 MCT file(s) to MIDAS Civil 2022 format.")
+    ap.add_argument("input", nargs="+", help="input .mct/.txt file(s) from Civil 2025")
+    ap.add_argument("-o", "--output",
+                    help="output file (single input only)")
+    ap.add_argument("--outdir",
+                    help="write outputs into this directory (batch mode); "
+                         "each is named <input>_2022.<ext>")
+    ap.add_argument("--report",
+                    help="write the conversion report to this file (single input), "
+                         "or into --outdir as conversion_report.txt (batch)")
     ap.add_argument("--check", action="store_true",
-                    help="analyse only; do not write an output file")
+                    help="analyse only; do not write output files")
     ap.add_argument("--no-sync-comments", action="store_true",
                     help="keep the 2025 comment/format header wording")
     ap.add_argument("--comment-profile",
@@ -545,25 +593,10 @@ def main(argv=None) -> int:
                          "(default: the bundled 2022 reference next to this script)")
     args = ap.parse_args(argv)
 
-    if not args.output and not args.check:
-        base, ext = os.path.splitext(args.input)
-        args.output = f"{base}_2022{ext or '.mct'}"
+    if args.output and len(args.input) > 1:
+        ap.error("-o/--output cannot be used with multiple input files; use --outdir")
 
-    with open(args.input, "r", encoding="utf-8", errors="replace", newline="") as fh:
-        text = fh.read()
-
-    # Detect the source version so the user knows what they are converting.
-    mv = re.search(r"^\*VERSION\s*\n\s*([0-9.]+)", text, re.M)
-    src_ver = mv.group(1) if mv else "?"
-    print(f"Input file      : {args.input}")
-    print(f"Detected version: {src_ver}")
-    if src_ver == VERSION_2022:
-        print("note: this file already reports Civil 2022 (9.1.0); the rules below "
-              "should all be no-ops.")
-    elif src_ver not in ("?", VERSION_2025):
-        print(f"note: version {src_ver} is neither {VERSION_2025} nor {VERSION_2022}. "
-              "Rules are written for 9.6.0 -> 9.1.0; review the report carefully.")
-
+    # ---- Civil 2022 reference used for comment-header wording ---------------
     prof_path = args.comment_profile
     if prof_path is None:
         here = os.path.dirname(os.path.abspath(__file__))
@@ -573,25 +606,49 @@ def main(argv=None) -> int:
     if profile is None and not args.no_sync_comments:
         print("note: no Civil 2022 reference available; comment headers left as-is.")
 
-    rep = Report()
-    rep.note(f"Source *VERSION = {src_ver}; output *VERSION = {VERSION_2022}")
-    result = convert(text, rep, profile, sync_hdr=not args.no_sync_comments)
+    if args.outdir:
+        os.makedirs(args.outdir, exist_ok=True)
 
-    print(rep.text())
+    # ---- single-file mode keeps one combined report ------------------------
+    exit_code = 0
+    combined: list[str] = []
+    for idx, in_path in enumerate(args.input, 1):
+        if args.output:
+            out_path = args.output
+        elif args.check:
+            out_path = None
+        else:
+            out_path = default_output_name(in_path, args.outdir)
 
-    if args.report:
-        with open(args.report, "w", encoding="utf-8") as fh:
-            fh.write(rep.text())
-        print(f"Report written to {args.report}")
+        rep = Report()
+        print("=" * 78)
+        print(f"[{idx}/{len(args.input)}] {in_path}")
+        print("=" * 78)
+        result = convert_one(in_path, out_path, profile, args, rep)
+        if result is None:
+            exit_code = 1
+        print(rep.text())
+        combined.append(f"### {in_path}\n\n{rep.text()}")
+        if not args.check and result is not None:
+            print(f"wrote {out_path}\n")
+
+    # ---- report ------------------------------------------------------------
+    report_path = args.report
+    if report_path is None and args.outdir and not args.check:
+        report_path = os.path.join(args.outdir, "conversion_report.txt")
+    if report_path:
+        if args.outdir and len(args.input) > 1:
+            os.makedirs(os.path.dirname(os.path.abspath(report_path)), exist_ok=True)
+            body = "\n".join(combined)
+        else:
+            body = combined[0] if combined else ""
+        with open(report_path, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        print(f"Report written to {report_path}")
 
     if args.check:
-        print("--check given: no output written.")
-        return 0
-
-    with open(args.output, "w", encoding="utf-8", newline="") as fh:
-        fh.write(result)
-    print(f"Converted file written to {args.output}")
-    return 0
+        print("--check given: no output files written.")
+    return exit_code
 
 
 if __name__ == "__main__":
